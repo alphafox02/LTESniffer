@@ -68,7 +68,9 @@ SignalGate& SignalGate::getInstance() {
 }
 
 void SignalGate::signalEntry(int sigNo) {
-  if (sigNo == SIGINT) {
+  // SIGTERM: systemd stop / `kill <pid>` / gdb-batch quit-with-inferior
+  // SIGHUP:  terminal closed (handy when running via tmux/ssh)
+  if (sigNo == SIGINT || sigNo == SIGTERM || sigNo == SIGHUP) {
     getInstance().notify();
   }
 }
@@ -83,8 +85,12 @@ void SignalGate::init() {
   sigset_t sigset;
   sigemptyset(&sigset);
   sigaddset(&sigset, SIGINT);
+  sigaddset(&sigset, SIGTERM);
+  sigaddset(&sigset, SIGHUP);
   sigprocmask(SIG_UNBLOCK, &sigset, nullptr);
   signal(SIGINT, signalEntry);
+  signal(SIGTERM, signalEntry);
+  signal(SIGHUP, signalEntry);
 }
 
 void SignalGate::attach(SignalHandler& handler) {
