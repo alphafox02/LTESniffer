@@ -922,6 +922,9 @@ void PUSCH_Decoder::print_api(uint32_t tti, uint16_t rnti, int id, std::string v
     std::string msg_name = convert_msg_name(msg);
     std::cout << std::left << std::setw(25) << msg_name;
     std::cout << std::endl;
+    // Machine-parseable UE-intel line for downstream ingest (ransack)
+    std::cout << "LTESNIFFER_UE\t" << tti << "\tUL\t" << rnti << "\t"
+              << id_name << "\t" << value << "\t" << msg_name << std::endl;
 }
 
 int PUSCH_Decoder::investigate_valid_ul_grant(DCI_UL &decoding_mem)

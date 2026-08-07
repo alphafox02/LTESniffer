@@ -1350,4 +1350,7 @@ void PDSCH_Decoder::print_api_dl(uint32_t tti, uint16_t rnti, int id, std::strin
 	std::string msg_name = convert_msg_name_dl(msg);
 	std::cout << std::left << std::setw(25) << msg_name;
 	std::cout << std::endl;
+	// Machine-parseable UE-intel line for downstream ingest (ransack)
+	std::cout << "LTESNIFFER_UE\t" << tti << "\tDL\t" << rnti << "\t"
+	          << id_name << "\t" << value << "\t" << msg_name << std::endl;
 }
