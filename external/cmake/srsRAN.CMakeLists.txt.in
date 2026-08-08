@@ -5,9 +5,10 @@ project(srsLTE-download NONE)
 
 include(ExternalProject)
 ExternalProject_Add(srsRAN
-    GIT_REPOSITORY https://github.com/ShaoPaoLao/srsRAN2.git
-    GIT_TAG master
-#    GIT_TAG falcon_v0.1
+    GIT_REPOSITORY https://github.com/ElectronicCats/srsRAN_multi_usrp.git
+    GIT_TAG multi-usrp-pps-sync
+#    GIT_TAG falcon_v0.1  (was ShaoPaoLao/srsRAN2@master; repointed to EC fork so
+#    ltesniffer-dl shares one libsrsran_rf.so with the harden uplink binary)
     SOURCE_DIR "${CMAKE_BINARY_DIR}/srsRAN-src"
     BINARY_DIR "${CMAKE_BINARY_DIR}/srsRAN-build"
     CONFIGURE_COMMAND ""
