@@ -526,6 +526,11 @@ bool LTESniffer_Core::run(){
       /*Change state to Decode MIB to find system frame number again*/
       if (state == DECODE_PDSCH && nof_lost_sync > 5){
         state = DECODE_MIB;
+        // Free before re-init: srsran_ue_mib_init bzeros the struct and
+        // re-allocates sf_symbols/PBCH/FFT internals. Re-initing without
+        // freeing leaks and can reuse stale state, so a resync on a fading
+        // signal fails to re-lock. (ported from harden cace0c4)
+        srsran_ue_mib_free(&ue_mib);
         if (srsran_ue_mib_init(&ue_mib, cur_worker->getBuffers()[0], cell.nof_prb)) {
           ERROR("Error initaiting UE MIB decoder");
           exit(-1);
