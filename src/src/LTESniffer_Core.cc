@@ -388,7 +388,26 @@ bool LTESniffer_Core::run(){
               ERROR("Error decoding UE MIB");
               exit(-1);
             } else if (n == SRSRAN_UE_MIB_FOUND) {
-              srsran_pbch_mib_unpack(bch_payload, &cell, &sfn);
+              // Reject corrupt MIBs before committing. The PBCH CRC can pass on
+              // noise-heavy captures and produce impossible bandwidth values
+              // (e.g. 125, 150) that cascade into FFT init failures downstream.
+              srsran_cell_t tentative_cell = cell;
+              uint32_t      tentative_sfn  = sfn;
+              srsran_pbch_mib_unpack(bch_payload, &tentative_cell, &tentative_sfn);
+              bool prb_valid = (tentative_cell.nof_prb == 6  ||
+                                tentative_cell.nof_prb == 15 ||
+                                tentative_cell.nof_prb == 25 ||
+                                tentative_cell.nof_prb == 50 ||
+                                tentative_cell.nof_prb == 75 ||
+                                tentative_cell.nof_prb == 100);
+              if (!prb_valid) {
+                std::cout << "Rejected corrupt MIB (nof_prb=" << tentative_cell.nof_prb
+                          << "), staying in cell search" << std::endl;
+                srsran_pbch_decode_reset(&ue_mib.pbch);
+                break;
+              }
+              cell = tentative_cell;
+              sfn  = tentative_sfn;
               srsran_cell_fprint(stdout, &cell, sfn);
               printf("Decoded MIB. SFN: %d, offset: %d\n", sfn, sfn_offset);
               sfn   = (sfn + sfn_offset) % 1024;
