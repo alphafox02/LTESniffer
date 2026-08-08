@@ -129,6 +129,7 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
         break;
       case 'I':
         args.cell_id = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
+        break;
       case 'w':
         args.file_wrap = true;
         break;
@@ -162,6 +163,7 @@ void ArgManager::parseArgs(Args& args, int argc, char **argv) {
         break;
       case 'C':
         args.cell_search = true;
+        break;
       case 'm':
         args.sniffer_mode = static_cast<uint32_t>(strtoul(argv[optind], nullptr, 0));
         break;

@@ -190,20 +190,36 @@ bool LTESniffer_Core::run(){
         ERROR("Uplink Frequency must be 0 in the DL Sniffer Mode \n");
     }
 
-    if (args.cell_search){
+    if (args.cell_search || args.cell_id != 0){
+      // -I <PCI> also triggers cell search. The old "manual" path below
+      // hardcoded nof_ports=2 and phich_resources=PHICH_R_1_6, which is wrong
+      // for any 4-port or non-default-PHICH cell -> CRS positions and PHICH
+      // symbols are misread and the MIB/PDSCH demod fails (nof_prb decodes
+      // garbage like 125/150). Always decode the MIB so nof_ports / phich /
+      // nof_prb come from the real cell.  (hand-ported from harden daf9209 - E. Contreras)
+      int force_n = args.force_N_id_2;
+      // If -I PCI is set without an explicit -l, narrow the PSS search to the
+      // N_id_2 group containing that PCI (N_id_2 = PCI mod 3): 504 -> 168 PCIs.
+      if (args.cell_id != 0 && force_n < 0) {
+        force_n = args.cell_id % 3;
+      }
       uint32_t ntrial = 0;
       do {
         ret = rf_search_and_decode_mib(
-            &rf, args.rf_nof_rx_ant, &cell_detect_config, args.force_N_id_2, &cell, &search_cell_cfo);
+            &rf, args.rf_nof_rx_ant, &cell_detect_config, force_n, &cell, &search_cell_cfo);
         if (ret < 0) {
           ERROR("Error searching for cell");
           exit(-1);
         } else if (ret == 0 && !go_exit) {
           printf("Cell not found after %d trials. Trying again (Press Ctrl+C to exit)\n", ntrial++);
+        } else if (args.cell_id != 0 && cell.id != args.cell_id) {
+          // Found a cell, but not the PCI that -I requested. Re-search.
+          printf("Found PCI %u, but -I requested %u. Re-searching...\n", cell.id, args.cell_id);
+          ret = 0;
         }
       } while (ret == 0 && !go_exit);
     } else{
-      //set up cell manually
+      //set up cell manually (only when neither -C nor -I is given)
       cell.nof_prb          = args.nof_prb;
       cell.id               = args.cell_id;
       cell.nof_ports        = 2;
