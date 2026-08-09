@@ -102,9 +102,32 @@ int PUSCH_Decoder::decode_ul_dcch(DCI_UL &decoding_mem, uint8_t *sdu_ptr, int le
     if (asn1_result == asn1::SRSASN_SUCCESS && ul_dcch_msg.msg.type() == ul_dcch_msg_type_c::types_opts::c1)
     {
         if (ul_dcch_msg.msg.c1().type() == ul_dcch_msg_type_c::c1_c_::types::ue_cap_info && (api_mode == 1 || api_mode == 3))
-        { //&& UECapability
-            // printf("[API] SF: %d-%d, RNTI: %d, Found UECapabilityInformation messages \n", ul_sf.tti/10, ul_sf.tti%10, decoding_mem.rnti);
-            print_api(ul_sf.tti, decoding_mem.rnti, -1, "-", MSG_UE_CAP);
+        { // UECapabilityInformation -> profile the UE: ue-Category, access-stratum
+          // release, and supported EUTRA bands (a device-class fingerprint: CAT-M/
+          // NB-IoT/few-band modules vs broadband handsets). Emitted as the API value
+          // "cat=<n>;rel=<relN>;bands=<a,b,c>" so ransack can classify handset/module.
+            std::string cap = "-";
+            auto &r8 = ul_dcch_msg.msg.c1().ue_cap_info().crit_exts.c1().ue_cap_info_r8();
+            for (auto &cont : r8.ue_cap_rat_container_list)
+            {
+                if (cont.rat_type.value != asn1::rrc::rat_type_opts::eutra)
+                    continue;
+                asn1::rrc::ue_eutra_cap_s eutra;
+                asn1::cbit_ref cbref(cont.ue_cap_rat_container.data(), cont.ue_cap_rat_container.size());
+                if (eutra.unpack(cbref) != asn1::SRSASN_SUCCESS)
+                    continue;
+                std::string bands;
+                for (auto &b : eutra.rf_params.supported_band_list_eutra)
+                {
+                    if (!bands.empty()) bands += ",";
+                    bands += std::to_string((unsigned)b.band_eutra);
+                }
+                cap = "cat=" + std::to_string((unsigned)eutra.ue_category) +
+                      ";rel=" + std::string(eutra.access_stratum_release.to_string()) +
+                      ";bands=" + bands;
+                break;
+            }
+            print_api(ul_sf.tti, decoding_mem.rnti, -1, cap, MSG_UE_CAP);
             mcstracking->increase_nof_api_msg();
             ret = SRSRAN_SUCCESS;
         }
